@@ -1,6 +1,7 @@
 package com.jt.shell.entity
 
-import org.springframework.beans.BeanUtils
+import cn.hutool.core.util.ReflectUtil
+import com.jt.shell.annotation.TableIgnore
 import org.springframework.beans.BeanWrapper
 import org.springframework.beans.BeanWrapperImpl
 import org.springframework.shell.table.TableModel
@@ -24,11 +25,12 @@ class BeanTableModelEx<T> : TableModel() {
 
     fun clazz(clazz: Class<T>?): BeanTableModelEx<T> {
         headers = ArrayList()
-        for (propertyName in BeanUtils.getPropertyDescriptors(clazz!!)) {
-            if ("class" == propertyName.name) {
+        for (field in ReflectUtil.getFields(clazz!!)) {
+
+            if (field.getAnnotation(TableIgnore::class.java) != null) {
                 continue
             }
-            headers!!.add(propertyName.name)
+            headers!!.add(field.name)
         }
         return this
     }
