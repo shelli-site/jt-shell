@@ -52,7 +52,9 @@ class SocketCommand {
             val client = AioClient(InetSocketAddress(host, port), object : SimpleIoAction() {
                 override fun doAction(session: AioSession, data: ByteBuffer) {
                     if (data.hasRemaining()) {
-                        socketTable.historyMsg.add(HistoryMsg(MsgType.接收, LocalDateTime.now(), StrUtil.utf8Str(data)))
+                        val msg = HistoryMsg(MsgType.接收, LocalDateTime.now(), StrUtil.utf8Str(data))
+                        socketTable.historyMsg.add(msg)
+                        socketTable.snapshot = msg.toString()
                         session.read()
                     }
                 }
@@ -102,7 +104,9 @@ class SocketCommand {
             return "连接异常"
         }
         val sendTime = LocalDateTime.now()
-        socketTable.historyMsg.add(HistoryMsg(MsgType.发送, sendTime, hex))
+        val msg = HistoryMsg(MsgType.发送, sendTime, hex)
+        socketTable.historyMsg.add(msg)
+        socketTable.snapshot = msg.toString()
         val bytes = hex.toByteArray()
         socketTable.client!!.write(ByteBuffer.wrap(bytes))
         socketTable.print(-1)
