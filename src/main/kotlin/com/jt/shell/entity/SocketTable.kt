@@ -26,7 +26,7 @@ class SocketTable(val name: String, val host: String, val port: Int) {
 
 class HistoryMsg(val type: MsgType, val collectTime: LocalDateTime, val hex: String) {
     override fun toString(): String {
-        var sb = StringBuffer("[")
+        val sb = StringBuffer("[")
         sb.append(collectTime).append("]  ")
             .append(type.single).append(" ")
             .append(hex).append("\n")

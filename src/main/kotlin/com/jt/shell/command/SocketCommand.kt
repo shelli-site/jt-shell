@@ -7,7 +7,9 @@ import cn.hutool.socket.aio.SimpleIoAction
 import com.jt.shell.entity.HistoryMsg
 import com.jt.shell.entity.MsgType
 import com.jt.shell.entity.SocketTable
-import com.jt.shell.utils.TableBuilderHelper
+import com.jt.shell.utils.designTableStyle
+import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.context.ApplicationEventPublisher
 import org.springframework.shell.standard.ShellCommandGroup
 import org.springframework.shell.standard.ShellComponent
 import org.springframework.shell.standard.ShellMethod
@@ -21,17 +23,23 @@ import javax.validation.constraints.NotBlank
 
 @ShellComponent("socket")
 @ShellCommandGroup("socket")
-class SocketCommand {
+class SocketCommand(
+    @Autowired val eventPublisher: ApplicationEventPublisher
+) {
     private val pool: HashMap<String, SocketTable> = HashMap()
+
 
     @ShellMethod(key = ["socket ps", "ps"], value = "查看已连接的服务", prefix = "-")
     fun ps(a: Boolean): String? {
         var list = pool.keys.map { k -> pool.get(k) as SocketTable }
         if (a) {
-            return TableBuilderHelper.designTableStyle(SocketTable::class.java, list).render(50)
+            return designTableStyle(list).render(50)
         }
         list = list.filter { s -> s.active }
-        return TableBuilderHelper.designTableStyle(SocketTable::class.java, list).render(50)
+        if (list.isEmpty()) {
+            return "无连接"
+        }
+        return designTableStyle(list).render(50)
     }
 
 
