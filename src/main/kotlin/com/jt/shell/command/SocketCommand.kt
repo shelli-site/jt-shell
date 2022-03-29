@@ -7,6 +7,7 @@ import cn.hutool.socket.aio.SimpleIoAction
 import com.jt.shell.entity.HistoryMsg
 import com.jt.shell.entity.MsgType
 import com.jt.shell.entity.SocketTable
+import com.jt.shell.provider.ConnectProvider
 import com.jt.shell.utils.designTableStyle
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.context.ApplicationEventPublisher
@@ -25,7 +26,8 @@ import javax.validation.constraints.NotBlank
 @ShellComponent("socket")
 @ShellCommandGroup("socket")
 class SocketCommand(
-    @Autowired val eventPublisher: ApplicationEventPublisher
+    @Autowired val eventPublisher: ApplicationEventPublisher,
+    @Autowired val provider: ConnectProvider
 ) : CustomShellComponent() {
     private val pool = mutableMapOf<String, SocketTable>()
 
@@ -133,11 +135,12 @@ class SocketCommand(
 
     @ShellMethod(key = arrayOf("socket use", "use"), value = "设置当前连接", prefix = "-")
     fun use(): String {
-        val options = pool.entries.map { SelectorItem.of(it.key, it.value) }
+        val options = pool.entries.map { SelectorItem.of(it.value.showName, it.value) }
         if (options.isEmpty()) {
             return "没有可用连接"
         }
         val value = this.singleSelect(options, "选择当前连接")
+        eventPublisher.publishEvent(value)
         return "Got value ${value.name}"
     }
 
