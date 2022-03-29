@@ -1,13 +1,17 @@
 package com.jt.shell.jtshell
 
-import org.junit.jupiter.api.Test
-import org.springframework.boot.test.context.SpringBootTest
+import cn.hutool.socket.aio.AioServer
 
-@SpringBootTest
+//@SpringBootTest
 class JtShellApplicationTests {
 
-	@Test
-	fun contextLoads() {
-	}
+    //	@Test
+    fun contextLoads() {
+    }
 
+}
+
+fun main() {
+    val aioServer = AioServer(30523)
+    aioServer.start(false)
 }

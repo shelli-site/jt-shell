@@ -10,6 +10,7 @@ import com.jt.shell.entity.SocketTable
 import com.jt.shell.utils.designTableStyle
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.context.ApplicationEventPublisher
+import org.springframework.shell.component.support.SelectorItem
 import org.springframework.shell.standard.ShellCommandGroup
 import org.springframework.shell.standard.ShellComponent
 import org.springframework.shell.standard.ShellMethod
@@ -25,8 +26,8 @@ import javax.validation.constraints.NotBlank
 @ShellCommandGroup("socket")
 class SocketCommand(
     @Autowired val eventPublisher: ApplicationEventPublisher
-) {
-    private val pool: HashMap<String, SocketTable> = HashMap()
+) : CustomShellComponent() {
+    private val pool = mutableMapOf<String, SocketTable>()
 
 
     @ShellMethod(key = ["socket ps", "ps"], value = "查看已连接的服务", prefix = "-")
@@ -129,4 +130,16 @@ class SocketCommand(
         }
         return "发送完毕！"
     }
+
+    @ShellMethod(key = arrayOf("socket use", "use"), value = "设置当前连接", prefix = "-")
+    fun use(): String {
+        val options = pool.entries.map { SelectorItem.of(it.key, it.value) }
+        if (options.isEmpty()) {
+            return "没有可用连接"
+        }
+        val value = this.singleSelect(options, "选择当前连接")
+        return "Got value ${value.name}"
+    }
+
+
 }
