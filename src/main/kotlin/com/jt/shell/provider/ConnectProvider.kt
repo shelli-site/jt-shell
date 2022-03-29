@@ -13,6 +13,8 @@ class ConnectProvider : PromptProvider {
 
     private var currentConnect: SocketTable? = null
 
+    fun getCurrentConnect():SocketTable?  = currentConnect
+
     override fun getPrompt(): AttributedString {
         return AttributedString(
             "server-${promptPrefix()}:>",
