@@ -14,7 +14,7 @@ class SocketTable(val name: String, val host: String, val port: Int) {
         print(msg.toString())
     }
 
-    val showName: String by lazy { "${name}(${host}:${port})" }
+    fun showName(): String = "${name}(${host}:${port})"
 
     @TableIgnore
     var client: AioClient? = null

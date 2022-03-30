@@ -17,7 +17,6 @@ import org.springframework.shell.standard.*
 import java.net.InetSocketAddress
 import java.nio.ByteBuffer
 import java.time.LocalDateTime
-import java.util.function.Consumer
 import javax.validation.constraints.NotBlank
 
 
@@ -35,11 +34,11 @@ class SocketCommand(
      */
     @ShellMethod(key = ["socket ps", "ps"], value = "查看已连接的服务", prefix = "-")
     fun ps(a: Boolean): String? {
-        var list = pool.keys.map { k -> pool.get(k) as SocketTable }
+        var list = pool.values.toList()
         if (a) {
             return designTableStyle(list).render(50)
         }
-        list = list.filter { s -> s.active }
+        list = list.filter { it.active }
         if (list.isEmpty()) {
             return "无连接"
         }
@@ -81,7 +80,7 @@ class SocketCommand(
             result = "连接成功"
         } catch (e: Exception) {
             socketTable.error = e.message
-            result = """连接失败 ${e.message.toString()}"""
+            result = """连接失败 ${e.message}"""
         }
         return result
     }
@@ -91,7 +90,7 @@ class SocketCommand(
      */
     @ShellMethod(key = arrayOf("socket rm", "rm"), value = "移除连接", prefix = "")
     fun rm(@ShellOption(value = [""]) name: String): String {
-        if (pool.containsKey(name)) {
+        if (name in pool) {
             pool.remove(name)
             return name
         }
@@ -102,13 +101,18 @@ class SocketCommand(
      * 查看消息历史记录
      */
     @ShellMethod(key = arrayOf("socket hs", "hs"), value = "查看消息历史记录", prefix = "-")
-    fun hs(@NotBlank name: String): String {
-        val socketTable = pool.get(name)
-        if (socketTable == null) {
-            return "无此连接"
+    fun hs(name: String?): String {
+        if (name == null) {
+            return provider.getCurrentConnect()?.let {
+                it.historyMsg.forEach { print(it.toString()) }
+                ""
+            } ?: "无连接"
+        } else {
+            return pool[name]?.let {
+                it.historyMsg.forEach { print(it.toString()) }
+                ""
+            } ?: "无此连接"
         }
-        socketTable.historyMsg.forEach(Consumer { h -> print(h.toString()) })
-        return ""
     }
 
     /**
@@ -116,34 +120,32 @@ class SocketCommand(
      */
     @ShellMethod(key = arrayOf("socket send", "send"), value = "发送消息", prefix = "-")
     fun send(
-        @NotBlank name: String,
         @NotBlank hex: String,
         @ShellOption(value = ["-W", "-w"], help = "阻塞等待") W: Boolean,
         @ShellOption(help = "格式化输出") F: Boolean
     ): String {
-        val socketTable = pool.get(name)
-        if (socketTable == null) {
-            return "无此连接"
-        } else if (!socketTable.active || socketTable.client == null) {
-            return "连接异常"
-        }
         val sendTime = LocalDateTime.now()
         val msg = HistoryMsg(MsgType.发送, sendTime, hex)
-        socketTable.historyMsg.add(msg)
-        socketTable.snapshot = msg.toString()
         val bytes = hex.toByteArray()
-        socketTable.client!!.write(ByteBuffer.wrap(bytes))
-        socketTable.print(-1)
-        if (W) {
-            while (true) {
-                if (socketTable.historyMsg.get(socketTable.historyMsg.size - 1).collectTime.isAfter(sendTime)) {
-                    // 已收到消息
-                    socketTable.print(-1)
-                    break
+        return provider.getCurrentConnect()!!.run {
+            if (!active || client == null) {
+                return@run "连接异常"
+            }
+            historyMsg.add(msg)
+            snapshot = msg.toString()
+            client!!.write(ByteBuffer.wrap(bytes))
+            this.print(-1)
+            if (W) {
+                while (true) {
+                    if (historyMsg[historyMsg.size - 1].collectTime.isAfter(sendTime)) {
+                        // 已收到消息
+                        this.print(-1)
+                        break
+                    }
                 }
             }
+            return@run "发送完毕！"
         }
-        return "发送完毕！"
     }
 
     /**
@@ -151,7 +153,7 @@ class SocketCommand(
      */
     @ShellMethod(key = arrayOf("socket use", "use"), value = "设置当前连接", prefix = "-")
     fun use(): String {
-        val options = pool.entries.map { SelectorItem.of(it.value.showName, it.value) }
+        val options = pool.entries.map { SelectorItem.of(it.value.showName(), it.value) }
         if (options.isEmpty()) {
             return "没有可用连接"
         }
