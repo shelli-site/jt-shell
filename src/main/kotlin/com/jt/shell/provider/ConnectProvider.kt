@@ -11,9 +11,14 @@ import org.springframework.stereotype.Component
 @Component
 class ConnectProvider : PromptProvider {
 
-    private var currentConnect: SocketTable? = null
+    /**
+     * 当前连接（单例）
+     */
+    object Connect {
+        var socket: SocketTable? = null
+    }
 
-    fun getCurrentConnect():SocketTable?  = currentConnect
+    fun getCurrentConnect(): SocketTable? = Connect.socket
 
     override fun getPrompt(): AttributedString {
         return AttributedString(
@@ -22,10 +27,10 @@ class ConnectProvider : PromptProvider {
         )
     }
 
-    private fun promptPrefix(): String = currentConnect?.run { "$name[$host:$port]" } ?: "unknown"
+    private fun promptPrefix(): String = Connect.socket?.run { "$name[$host:$port]" } ?: "unknown"
 
     @EventListener
-    fun handle(connect: SocketTable) {
-        currentConnect = connect
+    fun handle(event: SocketTable) {
+        Connect.socket = event
     }
 }

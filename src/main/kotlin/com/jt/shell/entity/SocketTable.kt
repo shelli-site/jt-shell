@@ -27,13 +27,8 @@ class SocketTable(val name: String, val host: String, val port: Int) {
 }
 
 class HistoryMsg(val type: MsgType, val collectTime: LocalDateTime, val hex: String) {
-    override fun toString(): String {
-        val sb = StringBuffer("[")
-        sb.append(collectTime).append("]  ")
-            .append(type.single).append(" ")
-            .append(hex).append("\n")
-        return sb.toString()
-    }
+    
+    override fun toString(): String = "[${collectTime.toString().replace("T", " ")}] ${type.single} ${hex}\n"
 }
 
 enum class MsgType(val single: String) {

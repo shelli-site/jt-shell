@@ -8,6 +8,7 @@ import com.jt.shell.entity.HistoryMsg
 import com.jt.shell.entity.MsgType
 import com.jt.shell.entity.SocketTable
 import com.jt.shell.provider.ConnectProvider
+import com.jt.shell.utils.NONE
 import com.jt.shell.utils.designTableStyle
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.context.ApplicationEventPublisher
@@ -89,30 +90,33 @@ class SocketCommand(
      * 移除连接
      */
     @ShellMethod(key = arrayOf("socket rm", "rm"), value = "移除连接", prefix = "")
-    fun rm(@ShellOption(value = [""]) name: String): String {
-        if (name in pool) {
-            pool.remove(name)
-            return name
+    fun rm(@ShellOption(value = [""], defaultValue = NONE) name: String): String {
+        var poolName = name
+        if (poolName == NONE) {
+            provider.getCurrentConnect()?.let {
+                poolName = it.name
+            }
         }
-        return "无此连接"
+        if (poolName in pool) {
+            pool.remove(poolName)
+            return poolName
+        }
+        return "无连接可移除"
     }
 
     /**
      * 查看消息历史记录
      */
     @ShellMethod(key = arrayOf("socket hs", "hs"), value = "查看消息历史记录", prefix = "-")
-    fun hs(name: String?): String {
-        if (name == null) {
+    fun hs(@ShellOption(value = [""], defaultValue = NONE) name: String): String {
+        if (name == NONE) {
             return provider.getCurrentConnect()?.let {
-                it.historyMsg.forEach { print(it.toString()) }
-                ""
-            } ?: "无连接"
-        } else {
-            return pool[name]?.let {
-                it.historyMsg.forEach { print(it.toString()) }
-                ""
-            } ?: "无此连接"
+                it.historyMsg.map { it.toString() }.joinToString("")
+            } ?: "当前无连接"
         }
+        return pool[name]?.let {
+            it.historyMsg.map { it.toString() }.joinToString("")
+        } ?: "无此连接"
     }
 
     /**
@@ -120,7 +124,7 @@ class SocketCommand(
      */
     @ShellMethod(key = arrayOf("socket send", "send"), value = "发送消息", prefix = "-")
     fun send(
-        @NotBlank hex: String,
+        @NotBlank @ShellOption(value = [""]) hex: String,
         @ShellOption(value = ["-W", "-w"], help = "阻塞等待") W: Boolean,
         @ShellOption(help = "格式化输出") F: Boolean
     ): String {
@@ -152,7 +156,11 @@ class SocketCommand(
      * 设置当前连接
      */
     @ShellMethod(key = arrayOf("socket use", "use"), value = "设置当前连接", prefix = "-")
-    fun use(): String {
+    fun use(@ShellOption(value = [""], defaultValue = NONE) name: String): String {
+        if (name != NONE && pool.keys.contains(name)) {
+            eventPublisher.publishEvent(pool[name]!!)
+            return "use ${name} success！"
+        }
         val options = pool.entries.map { SelectorItem.of(it.value.showName(), it.value) }
         if (options.isEmpty()) {
             return "没有可用连接"
